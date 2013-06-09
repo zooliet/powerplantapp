@@ -11,9 +11,16 @@ require 'pv_adc'
 
 require './storage.rb'
 
-EventMachine.run do    
+EventMachine.run do   
+  
+  puts "Run-time options are #{ARGV}"
+
+  $storage_sampling = ARGV[0]
+  $wifi_enable      = ARGV[1]
+  $spectro          = ARGV[2]
+   
   class MainApp < Sinatra::Base
-  	register Sinatra::Async
+  	register Sinatra::Async  	  	
   	
   	configure :production do
       puts "Production configuration goes here..."
@@ -80,8 +87,11 @@ EventMachine.run do
     end
 
     EM.add_periodic_timer(0.5) do 
-      EM.defer(storage_sampling, fft_only) 
-      #EM.defer(adc_sampling, fft_only)
+      if $storage_sampling == 'true'
+        EM.defer(storage_sampling, fft_only) 
+      else
+        EM.defer(adc_sampling, fft_only)
+      end
     end
 
     get "/" do
@@ -89,8 +99,12 @@ EventMachine.run do
       if @host_ip == '127.0.0.1'
         @host_ip = '10.10.0.1'
       end
-      puts "****IP: #{@host_ip}"
-      erb :index
+      puts "[INFO] IP address: #{@host_ip}"
+      if $spectro == 'true'
+        erb :index_with_spectro, layout: :spectro_layout
+      else
+        erb :index, layout: :layout
+      end
     end
 
   	aget "/start.js" do
